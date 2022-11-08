@@ -44,7 +44,7 @@ class File:
         if self.fullpath is None:
             logging.info(f"No known path for file id '{self.media_id}', cannot delete file.")
         elif not self.fullpath.is_dir():
-            logging.info(f"Path for file id '{self.media_id}' exists but is not directory, ignoring instead of deleting.")
+            logging.debug(f"Path for file id '{self.media_id}' is not a directory or does not exist, not deleting.")
         else:
             for file in self.fullpath.glob('*'):
                 # note: this does not handle directories in fullpath
