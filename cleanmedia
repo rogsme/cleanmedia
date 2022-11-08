@@ -34,9 +34,7 @@ class File:
     @cached_property
     def fullpath(self):
         """returns the directory in which the "file" and all thumbnails are located, or None if no file is known"""
-        # TODO: Make a property, calculate on first usage and cache it?
-        if not self.base64hash:
-            return None
+        if not self.base64hash: return None
         return self.repo.media_path / self.base64hash[0:1] / self.base64hash[1:2] / self.base64hash[2:]
         
     def delete(self):
@@ -156,14 +154,14 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
+    # 30 days! Note that today() is local server timezone
     cleantime = datetime.today() - timedelta(days=30)
     files = mr.get_remote_media()
     for file in files:
         if file.create_date < cleantime:
             if args.dryrun: # the great pretender
-                if file.exists():
-                    logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
-                else:
-                    logging.info(f"file id {file.media_id} does not physically exist (path {file.fullpath})")
+                logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
+                if not file.exists():
+                    logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
             else:
                 file.delete()
