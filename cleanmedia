@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+#TODO: Sanity checks: Are files on the file system that the db does not know about?
+#TODO: Sanity checks: Are there thumbnails in the db that do not have corresponding media file entries?
+
+from datetime import datetime, timedelta
+from pathlib import Path
+import argparse
+import logging
+import typing
+
+try:
+    import psycopg2
+except ImportError as e:
+    print("Please install psycopg2")
+    exit(1)
+try:
+    import yaml
+except ImportError as e:
+    print("Please install pyyaml / python3-yaml")
+    exit(1)
+
+def read_config(conf_file):
+    try:
+        with open(conf_file) as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError as e:
+        errstr = f"Config file {conf_file} not found. Use the --help option to find out more."
+        logging.error(errstr)
+        exit(1)
+        
+    if "media_api" not in config:
+        logging.error("Missing section media_api")
+        exit(1)
+
+    if "global" in config and "database" in config["global"]:
+        CONN_STR = config["global"]["database"].get("connection_string", None)
+    else:
+        logging.debug("No database section, so we need the media_api specific connection string")
+        CONN_STR = config["media_api"].get("connection_string", None)
+
+    if CONN_STR is None:
+        logging.error("Did not find connection string to media database.")
+        exit(1)
+
+    BASE_PATH = Path(config["media_api"].get("base_path", None))
+
+    if BASE_PATH is None:
+        logging.error("Missing base_path in media_api")
+        exit(1)
+    return (BASE_PATH, CONN_STR)
+
+
+
+class File:
+    def __init__(self, media_repo, media_id, creation_ts, base64hash: str):
+        # The MediaRepository in which this file is recorded
+        self.repo = media_repo
+        self.media_id = media_id
+        # creation_ts is seconds since the epoch
+        self.create_date = datetime.fromtimestamp(creation_ts)
+        self.base64hash = base64hash
+
+    def fullpath(self):
+        """returns the directory in which the "file" and all thumbnails are located, or None if no file is known"""
+        # TODO: Make a property, calculate on first usage and cache it?
+        if not self.base64hash:
+            return None
+        return self.repo.media_path / self.base64hash[0:1] / self.base64hash[1:2] / self.base64hash[2:]
+        
+    def delete(self):
+        """Delete db entries, and the file itself"""
+        if self.fullpath() is None:
+            logging.info(f"No known path for file id '{self.media_id}', cannot delete.")
+            return
+        for file in self.fullpath().glob('**/*'):
+            file.unlink()
+        self.fullpath().rmdir()
+        logging.debug(f"Deleted directory {self.fullpath()}")    
+        #delete directory  (self.fullpath())
+
+    def exists(self):
+        """returns True if the media file itself exists on the file system"""
+        path = self.fullpath()
+        if path is None:
+            return False
+        return (path / 'file').exists()
+
+    def has_thumbnail(self):
+        cur = self.repo.conn.cursor()
+        # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
+        res = cur.execute(f"select COUNT(media_id) from mediaapi_thumbnail WHERE media_id='{self.media_id}';")
+        row = cur.fetchone()
+        return(row[0])
+        
+class MediaRepository:
+
+    def __init__(self, media_path: Path, connection_string: str):
+        # media_path is a pathlib.Path
+        self.media_path = media_path
+        if not self.media_path.is_absolute():
+            logging.warn("The media path is relative, make sure you run this script in the correct directory!")
+        if not self.media_path.is_dir():
+            raise Exception(f"The configured media dir cannot be found!")
+
+        # psql db connection
+        self.conn = None
+        self.db_conn_string = connection_string
+        self.connect_db();
+        
+    def connect_db(self):
+        #postgresql://user:pass@hostname/database?params
+        # postgres://dendrite:dendrite@localhost/dendrite?
+        if self.db_conn_string is None or not self.db_conn_string.startswith("postgres://"):
+            errstr = "DB connection not a postgres one"
+            logging.error(errstr)
+            raise ValueError(errstr)
+        self.conn = psycopg2.connect(self.db_conn_string)
+
+    def get_remote_media(self):
+        cur = self.conn.cursor()
+        # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
+        res = cur.execute("select media_id, creation_ts, base64hash from mediaapi_media_repository WHERE user_id = '';")
+        #select * from mediaapi_media_repository WHERE user_id = '';
+        files = []
+        for row in cur.fetchall():
+            # creation_ts is ms since the epoch, so we need to make sec out of it
+            f = File(self, row[0], row[1]//1000, row[2])
+            files.append(f)
+
+        cur.close()
+        return files
+        # mediaapi_thumbnail:
+        # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | width | height | resize_method
+
+def parse_options():
+    loglevel=logging.INFO # default
+    parser = argparse.ArgumentParser(
+                    prog = 'cleanmedia',
+                    description = 'Deletes older remote media files from dendrite servers',
+                    epilog = 'Works only with postgres databases.')
+    parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
+    parser.add_argument('-n', '--dryrun', action='store_true', help="Dry run (don't actually modify any files).")
+    parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
+    args = parser.parse_args()
+    if args.debug:
+        loglevel=logging.DEBUG
+    logging.basicConfig(level=loglevel, format= '%(levelname)s - %(message)s')
+    return args
+
+if __name__ == '__main__':
+    args = parse_options()
+
+    (MEDIA_PATH, CONN_STR) = read_config(args.config)
+    mr = MediaRepository(MEDIA_PATH, CONN_STR)
+    cleantime = datetime.today() - timedelta(days=30)
+    files = mr.get_remote_media()
+    for file in files:
+        if file.create_date < cleantime:
+            print (file.has_thumbnail(), file.base64hash)
+            if not file.exists():
+                logging.info(f"file id {file.media_id} does not physically exist (path {file.fullpath()})")
+                if not args.dryrun:
+                    file.delete()
+
+            
