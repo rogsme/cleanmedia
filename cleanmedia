@@ -76,8 +76,13 @@ class File:
         for file in self.fullpath().glob('**/*'):
             file.unlink()
         self.fullpath().rmdir()
-        logging.debug(f"Deleted directory {self.fullpath()}")    
-        #delete directory  (self.fullpath())
+        logging.debug(f"Deleted directory {self.fullpath()}")
+        with self.repo.conn.cursor() as cur:
+            cur.execute(f"DELETE from mediaapi_thumbnail WHERE media_id='%s';", self.media_id)
+            num_thumbnails = cur.rowcount
+            cur.execute(f"DELETE from mediaapi_media_repository WHERE media_id='%s';", self.media_id)
+            num_media = cur.rowcount
+        logging.debug(f"Deleted {num_media} + {num_thumbnails} db entries for media id {self.media_id}")
 
     def exists(self):
         """returns True if the media file itself exists on the file system"""
@@ -87,10 +92,10 @@ class File:
         return (path / 'file').exists()
 
     def has_thumbnail(self):
-        cur = self.repo.conn.cursor()
-        # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
-        res = cur.execute(f"select COUNT(media_id) from mediaapi_thumbnail WHERE media_id='{self.media_id}';")
-        row = cur.fetchone()
+        with self.repo.conn.cursor() as cur:
+            # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
+            cur.execute(f"select COUNT(media_id) from mediaapi_thumbnail WHERE media_id='{self.media_id}';")
+            row = cur.fetchone()
         return(row[0])
         
 class MediaRepository:
