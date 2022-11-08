@@ -84,6 +84,7 @@ class File:
             num_thumbnails = cur.rowcount
             cur.execute("DELETE from mediaapi_media_repository WHERE media_id=%s;", (self.media_id,))
             num_media = cur.rowcount
+        self.repo.conn.commit()
         logging.debug(f"Deleted {num_media} + {num_thumbnails} db entries for media id {self.media_id}")
 
     def exists(self):
