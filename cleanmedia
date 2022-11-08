@@ -18,38 +18,6 @@ except ImportError as e:
     exit(1)
 
 
-def read_config(conf_file):
-    """Read in the dendrite config file and return db creds and media path"""
-    try:
-        with open(conf_file) as f:
-            config = yaml.safe_load(f)
-    except FileNotFoundError as e:
-        errstr = f"Config file {conf_file} not found. Use the --help option to find out more."
-        logging.error(errstr)
-        exit(1)
-        
-    if "media_api" not in config:
-        logging.error("Missing section media_api")
-        exit(1)
-
-    if "global" in config and "database" in config["global"]:
-        CONN_STR = config["global"]["database"].get("connection_string", None)
-    else:
-        logging.debug("No database section, so we need the media_api specific connection string")
-        CONN_STR = config["media_api"].get("connection_string", None)
-
-    if CONN_STR is None:
-        logging.error("Did not find connection string to media database.")
-        exit(1)
-
-    BASE_PATH = Path(config["media_api"].get("base_path", None))
-
-    if BASE_PATH is None:
-        logging.error("Missing base_path in media_api")
-        exit(1)
-    return (BASE_PATH, CONN_STR)
-
-
 #------------------------------------------------------------------------------------
 class File:
     """Represents a file in our database together with (hopefully) a physical file and thumbnails"""
@@ -136,25 +104,54 @@ class MediaRepository:
                 f = File(self, row[0], row[1]//1000, row[2])
                 files.append(f)
         return files
+#--------------------------------------------------------------
+def read_config(conf_file):
+    """Read in the dendrite config file and return db creds and media path"""
+    try:
+        with open(conf_file) as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError as e:
+        errstr = f"Config file {conf_file} not found. Use the --help option to find out more."
+        logging.error(errstr)
+        exit(1)
+        
+    if "media_api" not in config:
+        logging.error("Missing section media_api")
+        exit(1)
+
+    if "global" in config and "database" in config["global"]:
+        CONN_STR = config["global"]["database"].get("connection_string", None)
+    else:
+        logging.debug("No database section, so we need the media_api specific connection string")
+        CONN_STR = config["media_api"].get("connection_string", None)
+
+    if CONN_STR is None:
+        logging.error("Did not find connection string to media database.")
+        exit(1)
+
+    BASE_PATH = Path(config["media_api"].get("base_path", None))
+
+    if BASE_PATH is None:
+        logging.error("Missing base_path in media_api")
+        exit(1)
+    return (BASE_PATH, CONN_STR)
 
 def parse_options():
     loglevel=logging.INFO # default
     parser = argparse.ArgumentParser(
                     prog = 'cleanmedia',
-                    description = 'Deletes older remote media files from dendrite servers',
-                    epilog = 'Works only with postgres databases.')
+                    description = 'Deletes 30 day old remote media files from dendrite servers')
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
     parser.add_argument('-n', '--dryrun', action='store_true', help="Dry run (don't actually modify any files).")
     parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
     args = parser.parse_args()
-    if args.debug:
-        loglevel=logging.DEBUG
+    if args.debug: loglevel=logging.DEBUG
     logging.basicConfig(level=loglevel, format= '%(levelname)s - %(message)s')
     return args
 
+
 if __name__ == '__main__':
     args = parse_options()
-
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
     cleantime = datetime.today() - timedelta(days=30)
@@ -165,5 +162,3 @@ if __name__ == '__main__':
                 logging.info(f"file id {file.media_id} does not physically exist (path {file.fullpath()})")
             if not args.dryrun:
                 file.delete()
-
-            
