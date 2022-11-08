@@ -7,6 +7,7 @@
 # mediaapi_thumbnail: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | width | height | resize_method
 
 from datetime import datetime, timedelta
+from functools import cached_property
 from pathlib import Path
 import argparse, logging, typing
 
@@ -30,6 +31,7 @@ class File:
         self.create_date = datetime.fromtimestamp(creation_ts)
         self.base64hash = base64hash
 
+    @cached_property
     def fullpath(self):
         """returns the directory in which the "file" and all thumbnails are located, or None if no file is known"""
         # TODO: Make a property, calculate on first usage and cache it?
@@ -39,16 +41,16 @@ class File:
         
     def delete(self):
         """Delete db entries, and the file itself"""
-        if self.fullpath() is None:
+        if self.fullpath is None:
             logging.info(f"No known path for file id '{self.media_id}', cannot delete file.")
-        elif not self.fullpath().is_dir():
+        elif not self.fullpath.is_dir():
             logging.info(f"Path for file id '{self.media_id}' exists but is not directory, ignoring instead of deleting.")
         else:
-            for file in self.fullpath().glob('*'):
-                # note: this does not handle directories in fullpath()
+            for file in self.fullpath.glob('*'):
+                # note: this does not handle directories in fullpath
                 file.unlink()
-            self.fullpath().rmdir()
-            logging.debug(f"Deleted directory {self.fullpath()}")
+            self.fullpath.rmdir()
+            logging.debug(f"Deleted directory {self.fullpath}")
         with self.repo.conn.cursor() as cur:
             cur.execute("DELETE from mediaapi_thumbnail WHERE media_id=%s;", (self.media_id,))
             num_thumbnails = cur.rowcount
@@ -59,12 +61,12 @@ class File:
 
     def exists(self):
         """returns True if the media file itself exists on the file system"""
-        path = self.fullpath()
-        if path is None:
+        if self.fullpath is None:
             return False
-        return (path / 'file').exists()
+        return (self.fullpath / 'file').exists()
 
     def has_thumbnail(self):
+        """Returns the number of thumbnails associated with this file"""
         with self.repo.conn.cursor() as cur:
             cur.execute(f"select COUNT(media_id) from mediaapi_thumbnail WHERE media_id='{self.media_id}';")
             row = cur.fetchone()
@@ -159,6 +161,6 @@ if __name__ == '__main__':
     for file in files:
         if file.create_date < cleantime:
             if not file.exists():
-                logging.info(f"file id {file.media_id} does not physically exist (path {file.fullpath()})")
+                logging.info(f"file id {file.media_id} does not physically exist (path {file.fullpath})")
             if not args.dryrun:
                 file.delete()
