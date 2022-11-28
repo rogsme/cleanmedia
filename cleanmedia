@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #TODO: Sanity checks: Are files on the file system that the db does not know about?
 #TODO: Sanity checks: Are there thumbnails in the db that do not have corresponding media file entries?
 
@@ -142,7 +155,11 @@ def parse_options():
                     prog = 'cleanmedia',
                     description = 'Deletes 30 day old remote media files from dendrite servers')
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
-    parser.add_argument('-n', '--dryrun', action='store_true', help="Dry run (don't actually modify any files).")
+    parser.add_argument('-t', '--days', dest="days",
+                        default="30", type=int,
+                        help="Keep remote media for <DAYS> days.")
+    parser.add_argument('-n', '--dryrun', action='store_true',
+                        help="Dry run (don't actually modify any files).")
     parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
     args = parser.parse_args()
     if args.debug: loglevel=logging.DEBUG
@@ -154,8 +171,9 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
-    # 30 days! Note that today() is local server timezone
-    cleantime = datetime.today() - timedelta(days=30)
+    # today() is local computer timezone, which might differ from the db server
+    cleantime = datetime.today() - timedelta(days=args.days)
+    logging.info("Deleting remote media older than %s", cleantime)
     files = mr.get_remote_media()
     for file in files:
         if file.create_date < cleantime:
