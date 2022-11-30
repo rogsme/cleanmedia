@@ -21,12 +21,20 @@ by a local user). It then deletes all entries, thumbnails and media
 files that have been created <DAYS> time ago. (with DAYS being
 configurable via command line and a default of 30 days)
 
-The main idea behind focusing on remote media is that a server should
-be able to refetch remote media in case it is needed. It would also
-make sense to delete local media, but that is more
-complicated. (possible scenarios: older than Y days, rooms that have
-been left by all users and are "unreachable", rooms that have been
-upgraded but have users left in it,....)
+This includes a number of remote media that we might want to keep
+(e.g. avatar images of users on remote home servers).
+
+But the main idea behind focusing on remote media is that a server
+should be able to refetch remote media in case it is needed. It would
+also make sense to delete local media, but that is more
+complicated. (possible scenarios: local media older than Y days, rooms
+that have been left by all users and are thus "unreachable", rooms that
+have been upgraded but have users left in it, media that has not been "accessed" the last Y days,....)
+
+But finding out these things and setting all these policies will be
+way more difficult and in some cases we do not have the information
+we'd need (e.g. if a media is part of an avatar image, or when media
+has been accessed the last time).
 
 Todo
 ----
