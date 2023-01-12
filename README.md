@@ -18,7 +18,7 @@ How it works:
 cleanmedia scours the database for all entries in the media repository
 where user_id is an empty string (that is, the media was not uploaded
 by a local user). It then deletes all entries, thumbnails and media
-files that have been created <DAYS> time ago. (with DAYS being
+files that have been created `DAYS` time ago. (with DAYS being
 configurable via command line and a default of 30 days)
 
 This includes a number of remote media that we might want to keep
@@ -48,3 +48,6 @@ LICENSE
 =======
 
 This code is released under the GNU GPL v3 or any later version.
+
+There is no warranty for correctness or data that might be
+accidentally deleted. Assume the worst and hope for the best!
