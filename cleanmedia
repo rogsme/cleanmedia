@@ -51,17 +51,24 @@ class File:
         return self.repo.media_path / self.base64hash[0:1] / self.base64hash[1:2] / self.base64hash[2:]
         
     def delete(self):
-        """Delete db entries, and the file itself"""
+        """Delete db entries, and the file itself
+
+        :returns: True on successful delete of file,
+                  False or Exception on failure"""
+        res = True
         if self.fullpath is None:
             logging.info(f"No known path for file id '{self.media_id}', cannot delete file.")
-        elif not self.fullpath.is_dir():
+            res = False
+        if not self.fullpath.is_dir():
             logging.debug(f"Path for file id '{self.media_id}' is not a directory or does not exist, not deleting.")
-        else:
-            for file in self.fullpath.glob('*'):
-                # note: this does not handle directories in fullpath
-                file.unlink()
-            self.fullpath.rmdir()
-            logging.debug(f"Deleted directory {self.fullpath}")
+            res = False
+
+        for file in self.fullpath.glob('*'):
+            # note: this does not handle directories in fullpath
+            file.unlink()
+        self.fullpath.rmdir()
+        logging.debug(f"Deleted directory {self.fullpath}")
+
         with self.repo.conn.cursor() as cur:
             cur.execute("DELETE from mediaapi_thumbnail WHERE media_id=%s;", (self.media_id,))
             num_thumbnails = cur.rowcount
@@ -69,6 +76,7 @@ class File:
             num_media = cur.rowcount
         self.repo.conn.commit()
         logging.debug(f"Deleted {num_media} + {num_thumbnails} db entries for media id {self.media_id}")
+        return res
 
     def exists(self):
         """returns True if the media file itself exists on the file system"""
@@ -175,11 +183,17 @@ if __name__ == '__main__':
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
     files = mr.get_remote_media()
+    num_deleted = 0 #count the number of actually deleted files
     for file in files:
         if file.create_date < cleantime:
+            num_deleted = 0
             if args.dryrun: # the great pretender
                 logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
                 if not file.exists():
                     logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
             else:
                 file.delete()
+    if args.dryrun:
+        logging.info("%d files would have been deleted during the run.",num_deleted)
+    else:
+        logging.info("Deleted %d files during the run.",num_deleted)
