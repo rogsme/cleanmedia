@@ -59,15 +59,15 @@ class File:
         if self.fullpath is None:
             logging.info(f"No known path for file id '{self.media_id}', cannot delete file.")
             res = False
-        if not self.fullpath.is_dir():
+        elif not self.fullpath.is_dir():
             logging.debug(f"Path for file id '{self.media_id}' is not a directory or does not exist, not deleting.")
             res = False
-
-        for file in self.fullpath.glob('*'):
-            # note: this does not handle directories in fullpath
-            file.unlink()
-        self.fullpath.rmdir()
-        logging.debug(f"Deleted directory {self.fullpath}")
+        else:
+            for file in self.fullpath.glob('*'):
+                # note: this does not handle directories in fullpath
+                file.unlink()
+            self.fullpath.rmdir()
+            logging.debug(f"Deleted directory {self.fullpath}")
 
         with self.repo.conn.cursor() as cur:
             cur.execute("DELETE from mediaapi_thumbnail WHERE media_id=%s;", (self.media_id,))
