@@ -183,7 +183,6 @@ if __name__ == '__main__':
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
     files = mr.get_remote_media()
-    num_deleted = 0 #count the number of actually deleted files
     for file in files:
         if file.create_date < cleantime:
             num_deleted = 0
@@ -194,6 +193,6 @@ if __name__ == '__main__':
             else:
                 file.delete()
     if args.dryrun:
-        logging.info("%d files would have been deleted during the run.",num_deleted)
+        logging.info("%d files would have been deleted during the run.",len(files))
     else:
-        logging.info("Deleted %d files during the run.",num_deleted)
+        logging.info("Deleted %d files during the run.",len(files))
