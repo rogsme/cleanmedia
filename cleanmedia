@@ -109,7 +109,7 @@ class MediaRepository:
         
     def connect_db(self):
         #postgresql://user:pass@localhost/database?params
-        if self.db_conn_string is None or not self.db_conn_string.startswith("postgres://"):
+        if self.db_conn_string is None or not self.db_conn_string.startswith(("postgres://","postgresql://")):
             errstr = "DB connection not a postgres one"
             logging.error(errstr)
             raise ValueError(errstr)
