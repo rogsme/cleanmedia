@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#TODO: Sanity checks: Are files on the file system that the db does not know about?
-#TODO: Sanity checks: Are there thumbnails in the db that do not have corresponding media file entries?
-
 # mediaapi_media_repository: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
 # mediaapi_thumbnail: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | width | height | resize_method
 
