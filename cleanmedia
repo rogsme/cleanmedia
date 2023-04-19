@@ -104,7 +104,7 @@ class MediaRepository:
         self.db_conn_string = connection_string
         self.conn = self.connect_db();
         
-    def connect_db(self) -> psycopg2.connection:
+    def connect_db(self) -> psycopg2.extensions.connection:
         #postgresql://user:pass@localhost/database?params
         if self.db_conn_string is None or not self.db_conn_string.startswith(("postgres://","postgresql://")):
             errstr = "DB connection not a postgres one"
