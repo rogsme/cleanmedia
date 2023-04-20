@@ -36,13 +36,15 @@ way more difficult and in some cases we do not have the information
 we'd need (e.g. if a media is part of an avatar image, or when media
 has been accessed the last time).
 
+In addition it performs some sanity checks and warns if inconsistencies occur:
+ 1) Are there thumbnails in the db that do not have
+    corresponding media file entries (in the db)?
+
 Todo
 ----
 
 - Sanity checks: Are files on the file system that the db does not
   know about?
-- Sanity checks: Are there thumbnails in the db that do not have
-  corresponding media file entries?
 
 LICENSE
 =======
