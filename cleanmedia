@@ -187,10 +187,11 @@ if __name__ == '__main__':
     #------------------
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
+    num_deleted = 0
     files = mr.get_remote_media()
     for file in files:
         if file.create_date < cleantime:
-            num_deleted = 0
+            num_deleted += 1
             if args.dryrun: # the great pretender
                 logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
                 if not file.exists():
@@ -198,6 +199,6 @@ if __name__ == '__main__':
             else:
                 file.delete()
     if args.dryrun:
-        logging.info("%d files would have been deleted during the run.",len(files))
+        logging.info("%d files would have been deleted during the run.", num_deleted)
     else:
-        logging.info("Deleted %d files during the run.",len(files))
+        logging.info("Deleted %d files during the run.", num_deleted)
