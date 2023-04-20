@@ -122,6 +122,16 @@ class MediaRepository:
                 f = File(self, row[0], row[1]//1000, row[2])
                 files.append(f)
         return files
+
+    def sanity_check_thumbnails(self) -> None:
+        """Warn if we have thumbnails in the db that do not refer to existing media"""
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT COUNT(media_id) from mediaapi_thumbnail WHERE media_id NOT IN (SELECT media_id FROM mediaapi_media_repository);")
+            row = cur.fetchone()
+            if row[0]:
+                logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
+        
+
 #--------------------------------------------------------------
 def read_config(conf_file: Union[str,Path]) -> Tuple[Path, str]:
     """Read in the dendrite config file and return db creds and media path"""
@@ -176,7 +186,8 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
-    # today() is local computer timezone, which might differ from the db server
+    mr.sanity_check_thumbnails() # warn in case of superfluous thumbnails
+    #------------------
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
     files = mr.get_remote_media()
