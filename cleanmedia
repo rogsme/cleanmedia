@@ -25,13 +25,11 @@ try:
     import psycopg2
     import yaml
 except ImportError as e:
-    print("Please install psycopg2 and pyyaml")
-    exit(1)
+    raise Exception("Please install psycopg2 and pyyaml")
 
-
-#------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 class File:
-    """Represents a file in our database together with (hopefully) a physical file and thumbnails"""
+    """A file in our db together with (hopefully) a physical file and thumbnails"""
 
     def __init__(self, media_repo: 'MediaRepository', media_id: str, creation_ts: int, base64hash: str):
         # The MediaRepository in which this file is recorded
@@ -91,9 +89,8 @@ class File:
         return(int(row[0]))
 #----------------------------------------------------------------------
 class MediaRepository:
-    
+    """A dendrite media repository"""
     def __init__(self, media_path: Path, connection_string: str):
-        # media_path is a pathlib.Path
         self.media_path = media_path
         if not self.media_path.is_absolute():
             logging.warn("The media path is relative, make sure you run this script in the correct directory!")
