@@ -40,6 +40,14 @@ In addition it performs some sanity checks and warns if inconsistencies occur:
  1) Are there thumbnails in the db that do not have
     corresponding media file entries (in the db)?
 
+Requirements
+----
+
+ - Python >= 3.8
+ - psycopg2
+ - yaml
+
+
 Todo
 ----
 
