@@ -44,7 +44,7 @@ class File:
         """returns the directory in which the "file" and all thumbnails are located, or None if no file is known"""
         if not self.base64hash: return None
         return self.repo.media_path / self.base64hash[0:1] / self.base64hash[1:2] / self.base64hash[2:]
-        
+
     def delete(self) -> bool:
         """Delete db entries, and the file itself
 
@@ -100,7 +100,7 @@ class MediaRepository:
         # psql db connection
         self.db_conn_string = connection_string
         self.conn = self.connect_db();
-        
+
     def connect_db(self) -> psycopg2.extensions.connection:
         #postgresql://user:pass@localhost/database?params
         if self.db_conn_string is None or not self.db_conn_string.startswith(("postgres://","postgresql://")):
@@ -127,7 +127,6 @@ class MediaRepository:
             row = cur.fetchone()
             if row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
-        
 
 #--------------------------------------------------------------
 def read_config(conf_file: Union[str,Path]) -> Tuple[Path, str]:
@@ -139,7 +138,7 @@ def read_config(conf_file: Union[str,Path]) -> Tuple[Path, str]:
         errstr = f"Config file {conf_file} not found. Use the --help option to find out more."
         logging.error(errstr)
         exit(1)
-        
+
     if "media_api" not in config:
         logging.error("Missing section media_api")
         exit(1)
