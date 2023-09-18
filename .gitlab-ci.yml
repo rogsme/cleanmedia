@@ -8,13 +8,10 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 before_script:
-#  - python --version ; pip --version  # For debugging
+  #  - python --version ; pip --version  # For debugging
   - pip install flake8 -qq
 
 test:
   script:
     # ignore long lines
     - flake8 --ignore=E501 cleanmedia
-  artifacts:
-    paths:
-      - cleanmedia
