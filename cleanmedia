@@ -130,7 +130,7 @@ class MediaRepository:
         with self.conn.cursor() as cur:
             cur.execute("SELECT COUNT(media_id) from mediaapi_thumbnail WHERE media_id NOT IN (SELECT media_id FROM mediaapi_media_repository);")
             row = cur.fetchone()
-            if row[0]:
+            if row is not None and row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
 
 
