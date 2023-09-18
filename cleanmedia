@@ -12,18 +12,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-# mediaapi_media_repository: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
-# mediaapi_thumbnail: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | width | height | resize_method
 import argparse
 import logging
 from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
 from typing import Optional, Union, List, Tuple
-
 try:
-    import psycopg2
+    import psycopg2, psycopg2.extensions  # noqa: E401
     import yaml
 except ImportError:
     raise Exception("Please install psycopg2 and pyyaml")
@@ -130,7 +126,7 @@ class MediaRepository:
         with self.conn.cursor() as cur:
             cur.execute("SELECT COUNT(media_id) from mediaapi_thumbnail WHERE media_id NOT IN (SELECT media_id FROM mediaapi_media_repository);")
             row = cur.fetchone()
-            if row[0]:
+            if row is not None and row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
 
 
