@@ -99,10 +99,10 @@ class MediaRepository:
         if not self.media_path.is_absolute():
             logging.warn("The media path is relative, make sure you run this script in the correct directory!")
         if not self.media_path.is_dir():
-            raise Exception(f"The configured media dir cannot be found!")
+            raise Exception("The configured media dir cannot be found!")
 
         self.db_conn_string = connection_string  # psql db connection
-        self.conn = self.connect_db();
+        self.conn = self.connect_db()
 
     def connect_db(self) -> psycopg2.extensions.connection:
         # postgresql://user:pass@localhost/database?params
@@ -166,11 +166,12 @@ def read_config(conf_file: Union[str, Path]) -> Tuple[Path, str]:
         exit(1)
     return (BASE_PATH, CONN_STR)
 
+
 def parse_options() -> argparse.Namespace:
-    loglevel=logging.INFO  # default logging level
+    loglevel = logging.INFO  # default logging level
     parser = argparse.ArgumentParser(
-                    prog='cleanmedia',
-                    description='Deletes 30 day old remote media files from dendrite servers')
+        prog='cleanmedia',
+        description='Deletes 30 day old remote media files from dendrite servers')
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
     parser.add_argument('-t', '--days', dest="days",
                         default="30", type=int,
@@ -179,8 +180,9 @@ def parse_options() -> argparse.Namespace:
                         help="Dry run (don't actually modify any files).")
     parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
     args: argparse.Namespace = parser.parse_args()
-    if args.debug: loglevel=logging.DEBUG
-    logging.basicConfig(level=loglevel, format= '%(levelname)s - %(message)s')
+    if args.debug:
+        loglevel=logging.DEBUG
+    logging.basicConfig(level=loglevel, format='%(levelname)s - %(message)s')
     return args
 
 
@@ -188,7 +190,7 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
-    mr.sanity_check_thumbnails() # warn in case of superfluous thumbnails
+    mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
     # ------real main part------------
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
