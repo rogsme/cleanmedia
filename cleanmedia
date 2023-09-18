@@ -4,18 +4,19 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # mediaapi_media_repository: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
 # mediaapi_thumbnail: media_id | media_origin | content_type | file_size_bytes |  creation_ts  | width | height | resize_method
-import argparse, logging
+import argparse
+import logging
 from datetime import datetime, timedelta
 from functools import cached_property
 from pathlib import Path
@@ -24,10 +25,11 @@ from typing import Optional, Union, List, Tuple
 try:
     import psycopg2
     import yaml
-except ImportError as e:
+except ImportError:
     raise Exception("Please install psycopg2 and pyyaml")
 
-#------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------
 class File:
     """A file in our db together with (hopefully) a physical file and thumbnails"""
 
@@ -42,7 +44,8 @@ class File:
     @cached_property
     def fullpath(self) -> Optional[Path]:
         """returns the directory in which the "file" and all thumbnails are located, or None if no file is known"""
-        if not self.base64hash: return None
+        if not self.base64hash:
+            return None
         return self.repo.media_path / self.base64hash[0:1] / self.base64hash[1:2] / self.base64hash[2:]
 
     def delete(self) -> bool:
