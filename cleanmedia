@@ -89,8 +89,9 @@ class File:
             row = cur.fetchone()
             if row is None:
                 return 0
-        return(int(row[0]))
-#----------------------------------------------------------------------
+        return int(row[0])
+
+
 class MediaRepository:
     """A dendrite media repository"""
     def __init__(self, media_path: Path, connection_string: str):
@@ -100,13 +101,14 @@ class MediaRepository:
         if not self.media_path.is_dir():
             raise Exception(f"The configured media dir cannot be found!")
 
-        # psql db connection
-        self.db_conn_string = connection_string
+        self.db_conn_string = connection_string  # psql db connection
         self.conn = self.connect_db();
 
     def connect_db(self) -> psycopg2.extensions.connection:
-        #postgresql://user:pass@localhost/database?params
-        if self.db_conn_string is None or not self.db_conn_string.startswith(("postgres://","postgresql://")):
+        # postgresql://user:pass@localhost/database?params
+        if self.db_conn_string is None \
+           or not self.db_conn_string.startswith(("postgres://",
+                                                  "postgresql://")):
             errstr = "DB connection not a postgres one"
             logging.error(errstr)
             raise ValueError(errstr)
@@ -119,7 +121,7 @@ class MediaRepository:
             files = []
             for row in cur.fetchall():
                 # creation_ts is ms since the epoch, so convert to seconds
-                f = File(self, row[0], row[1]//1000, row[2])
+                f = File(self, row[0], row[1] // 1000, row[2])
                 files.append(f)
         return files
 
@@ -131,13 +133,14 @@ class MediaRepository:
             if row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
 
-#--------------------------------------------------------------
-def read_config(conf_file: Union[str,Path]) -> Tuple[Path, str]:
+
+# --------------------------------------------------------------
+def read_config(conf_file: Union[str, Path]) -> Tuple[Path, str]:
     """Read in the dendrite config file and return db creds and media path"""
     try:
         with open(conf_file) as f:
             config = yaml.safe_load(f)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         errstr = f"Config file {conf_file} not found. Use the --help option to find out more."
         logging.error(errstr)
         exit(1)
@@ -164,10 +167,10 @@ def read_config(conf_file: Union[str,Path]) -> Tuple[Path, str]:
     return (BASE_PATH, CONN_STR)
 
 def parse_options() -> argparse.Namespace:
-    loglevel=logging.INFO # default
+    loglevel=logging.INFO  # default logging level
     parser = argparse.ArgumentParser(
-                    prog = 'cleanmedia',
-                    description = 'Deletes 30 day old remote media files from dendrite servers')
+                    prog='cleanmedia',
+                    description='Deletes 30 day old remote media files from dendrite servers')
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
     parser.add_argument('-t', '--days', dest="days",
                         default="30", type=int,
@@ -180,13 +183,13 @@ def parse_options() -> argparse.Namespace:
     logging.basicConfig(level=loglevel, format= '%(levelname)s - %(message)s')
     return args
 
-#-----------------------------------------------------------------------
+
 if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
     mr.sanity_check_thumbnails() # warn in case of superfluous thumbnails
-    #------------------
+    # ------real main part------------
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
     num_deleted = 0
@@ -194,7 +197,7 @@ if __name__ == '__main__':
     for file in files:
         if file.create_date < cleantime:
             num_deleted += 1
-            if args.dryrun: # the great pretender
+            if args.dryrun:  # the great pretender
                 logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
                 if not file.exists():
                     logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
