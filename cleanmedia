@@ -96,6 +96,8 @@ class MediaRepository:
             logging.warn("The media path is relative, make sure you run this script in the correct directory!")
         if not self.media_path.is_dir():
             raise Exception("The configured media dir cannot be found!")
+        # List of current avatar imgs. init empty
+        self._avatar_media_ids: List[str] = []
 
         self.db_conn_string = connection_string  # psql db connection
         self.conn = self.connect_db()
@@ -110,16 +112,39 @@ class MediaRepository:
             raise ValueError(errstr)
         return psycopg2.connect(self.db_conn_string)
 
-    def get_remote_media(self) -> List[File]:
+    def get_media(self, local: bool = False) -> List[File]:
+        """Return List[File] of remote media or ALL media if local==True"""
         with self.conn.cursor() as cur:
             # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
-            cur.execute("select media_id, creation_ts, base64hash from mediaapi_media_repository WHERE user_id = '';")
+            sql_str = "SELECT media_id, creation_ts, base64hash from mediaapi_media_repository"
+            if not local:
+                # only fetch remote media where user_id is empty
+                sql_str += " WHERE user_id = ''"
+            sql_str += ";"
+            cur.execute(sql_str)
             files = []
             for row in cur.fetchall():
                 # creation_ts is ms since the epoch, so convert to seconds
                 f = File(self, row[0], row[1] // 1000, row[2])
                 files.append(f)
         return files
+
+    def get_avatar_images(self) -> List[str]:
+        """Get a list of media_id which are current avatar images
+
+        We don't want to clean up those. Save & cache them internally.
+        """
+        media_id = []
+        with self.conn.cursor() as cur:
+            cur.execute("select avatar_url from userapi_profiles;")
+            for row in cur.fetchall():
+                url = row[0]  # mxc://matrix.org/6e627f4c538563
+                try:
+                    media_id.append(url[url.rindex("/") + 1:])
+                except ValueError:
+                    logging.warn("No slash in URL '%s'!", url)
+            self._avatar_media_ids = media_id
+        return self._avatar_media_ids
 
     def sanity_check_thumbnails(self) -> None:
         """Warn if we have thumbnails in the db that do not refer to existing media"""
@@ -172,6 +197,8 @@ def parse_options() -> argparse.Namespace:
     parser.add_argument('-t', '--days', dest="days",
                         default="30", type=int,
                         help="Keep remote media for <DAYS> days.")
+    parser.add_argument('-l', '--local', action='store_true',
+                        help="Also include local (ie, from *our* users) media files when purging.")
     parser.add_argument('-n', '--dryrun', action='store_true',
                         help="Dry run (don't actually modify any files).")
     parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
@@ -186,13 +213,18 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
+    # Sanity checks
     mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
+    # Preps
+    if args.local:
+        # populate the cache of current avt img. so we don't delete them
+        mr.get_avatar_images()
     # ------real main part------------
     cleantime = datetime.today() - timedelta(days=args.days)
     logging.info("Deleting remote media older than %s", cleantime)
     num_deleted = 0
-    files = mr.get_remote_media()
-    for file in files:
+    files = mr.get_media(args.local)
+    for file in [f for f in files if f.media_id not in mr._avatar_media_ids]:
         if file.create_date < cleantime:
             num_deleted += 1
             if args.dryrun:  # the great pretender
