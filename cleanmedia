@@ -234,6 +234,7 @@ if __name__ == '__main__':
             else:
                 file.delete()
     if args.dryrun:
-        logging.info("%d files would have been deleted during the run.", num_deleted)
+        logging.info("%d files would have been deleted during the run.",
+                     num_deleted)
     else:
         logging.info("Deleted %d files during the run.", num_deleted)
