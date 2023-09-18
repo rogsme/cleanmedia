@@ -10,8 +10,11 @@ workflow:
 before_script:
   #  - python --version ; pip --version  # For debugging
   - pip install flake8 -qq
+  - pip install mypy -qq
+  - pip install types-PyYAML types-psycopg2 -qq
 
 test:
   script:
     # ignore long lines
     - flake8 --ignore=E501 cleanmedia
+    - mypy cleanmedia
