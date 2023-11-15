@@ -201,10 +201,13 @@ def parse_options() -> argparse.Namespace:
                         help="Also include local (ie, from *our* users) media files when purging.")
     parser.add_argument('-n', '--dryrun', action='store_true',
                         help="Dry run (don't actually modify any files).")
-    parser.add_argument('-d', '--debug', action='store_true', help="Turn debug output on.")
+    parser.add_argument('-q', '--quiet', action='store_true', help="Reduce output verbosity.")
+    parser.add_argument('-d', '--debug', action='store_true', help="Increase output verbosity.")
     args: argparse.Namespace = parser.parse_args()
     if args.debug:
         loglevel = logging.DEBUG
+    elif args.quiet:
+        loglevel = logging.WARNING
     logging.basicConfig(level=loglevel, format='%(levelname)s - %(message)s')
     return args
 
