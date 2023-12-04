@@ -172,9 +172,9 @@ def read_config(conf_file: Union[str, Path]) -> Tuple[Path, str]:
 
     if "global" in config and "database" in config["global"]:
         CONN_STR = config["global"]["database"].get("connection_string", None)
-    else:
-        logging.debug("No database section, so we need the media_api specific connection string")
-        CONN_STR = config["media_api"].get("connection_string", None)
+    elif "media_api" in config and "database" in config["media_api"]:
+        logging.debug("No database section in global, but one in media_api, using that")
+        CONN_STR = config["media_api"]["database"].get("connection_string", None)
 
     if CONN_STR is None:
         logging.error("Did not find connection string to media database.")
