@@ -170,9 +170,10 @@ def read_config(conf_file: Union[str, Path]) -> Tuple[Path, str]:
         logging.error("Missing section media_api")
         exit(1)
 
+    CONN_STR = None
     if "global" in config and "database" in config["global"]:
         CONN_STR = config["global"]["database"].get("connection_string", None)
-    elif "media_api" in config and "database" in config["media_api"]:
+    elif "database" in config["media_api"]:
         logging.debug("No database section in global, but one in media_api, using that")
         CONN_STR = config["media_api"]["database"].get("connection_string", None)
 
