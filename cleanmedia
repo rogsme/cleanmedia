@@ -136,7 +136,7 @@ class MediaRepository:
         """
         media_id = []
         with self.conn.cursor() as cur:
-            cur.execute("select avatar_url from userapi_profiles;")
+            cur.execute("SELECT avatar_url FROM userapi_profiles WHERE avatar_url > '';")
             for row in cur.fetchall():
                 url = row[0]  # mxc://matrix.org/6e627f4c538563
                 try:
