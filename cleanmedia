@@ -112,6 +112,16 @@ class MediaRepository:
             raise ValueError(errstr)
         return psycopg2.connect(self.db_conn_string)
 
+    def get_single_media(self, mxid: str) -> Optional[File]:
+        """Return `File` or `None`"""
+        with self.conn.cursor() as cur:
+            sql_str = "SELECT media_id, creation_ts, base64hash from mediaapi_media_repository WHERE media_id = %s;"
+            cur.execute(sql_str,(mxid,))
+            row = cur.fetchone()
+            if row is None: return None
+            # creation_ts is ms since the epoch, so convert to seconds
+            return File(self, row[0], row[1] // 1000, row[2])
+
     def get_all_media(self, local: bool = False) -> List[File]:
         """Return List[File] of remote media or ALL media if local==True"""
         with self.conn.cursor() as cur:
@@ -230,6 +240,8 @@ def parse_options() -> argparse.Namespace:
         prog='cleanmedia',
         description='Deletes 30 day old remote media files from dendrite servers')
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
+    parser.add_argument('-m', '--mxid', dest="mxid",
+                        help="Just delete media <MXID>. (no cleanup otherwise)")
     parser.add_argument('-t', '--days', dest="days",
                         default="30", type=int,
                         help="Keep remote media for <DAYS> days.")
@@ -253,8 +265,15 @@ if __name__ == '__main__':
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
 
-    # Sanity checks
-    mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
 
-    # Clean out of files
-    mr.clean_media_files(args.days, args.local, args.dryrun)
+    if args.mxid:
+        # Just clean a single media
+        file = mr.get_single_media(args.mxid)
+        logging.info("Found media with id", args.mxid)
+        if file and not args.dryrun:
+            file.delete()
+    else:
+        # Sanity checks
+        mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
+        # Clean out of files
+        mr.clean_media_files(args.days, args.local, args.dryrun)
