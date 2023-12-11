@@ -269,7 +269,7 @@ if __name__ == '__main__':
     if args.mxid:
         # Just clean a single media
         file = mr.get_single_media(args.mxid)
-        logging.info("Found media with id", args.mxid)
+        logging.info("Found media with id '%s'", args.mxid)
         if file and not args.dryrun:
             file.delete()
     else:          # main clean out...
