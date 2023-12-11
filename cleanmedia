@@ -174,10 +174,8 @@ class MediaRepository:
            :dryrun: (bool) Do not actually delete any files (just count)
         :returns: (int) The number of files that were/would be deleted
         """
-        # Preps
         if local:
             # populate the cache of current avt img. so we don't delete them
-            logging.warning("AVATAR")
             mr.get_avatar_images()
 
         cleantime = datetime.today() - timedelta(days=days)
