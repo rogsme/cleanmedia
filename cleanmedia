@@ -112,7 +112,7 @@ class MediaRepository:
             raise ValueError(errstr)
         return psycopg2.connect(self.db_conn_string)
 
-    def get_media(self, local: bool = False) -> List[File]:
+    def get_all_media(self, local: bool = False) -> List[File]:
         """Return List[File] of remote media or ALL media if local==True"""
         with self.conn.cursor() as cur:
             # media_id | media_origin | content_type | file_size_bytes |  creation_ts  | upload_name | base64hash | user_id
@@ -153,6 +153,41 @@ class MediaRepository:
             row = cur.fetchone()
             if row is not None and row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
+
+    def clean_media_files(self, days: int, local: bool = False, dryrun: bool = False) -> int:
+        """Clean out old media files from this repository
+
+        :params:
+           :days: (int) delete media files older than N days.
+           :local: (bool) Also delete media originating from local users
+           :dryrun: (bool) Do not actually delete any files (just count)
+        :returns: (int) The number of files that were/would be deleted
+        """
+        # Preps
+        if local:
+            # populate the cache of current avt img. so we don't delete them
+            logging.warning("AVATAR")
+            mr.get_avatar_images()
+
+        cleantime = datetime.today() - timedelta(days=days)
+        logging.info("Deleting remote media older than %s", cleantime)
+        num_deleted = 0
+        files = mr.get_all_media(local)
+        for file in [f for f in files if f.media_id not in mr._avatar_media_ids]:
+            if file.create_date < cleantime:
+                num_deleted += 1
+                if dryrun:  # the great pretender
+                    logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
+                    if not file.exists():
+                        logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
+                else:
+                    file.delete()
+        info_str = "Deleted %d files during the run."
+        if dryrun:
+            info_str = "%d files would have been deleted during the run."
+        logging.info(info_str, num_deleted)
+
+        return num_deleted
 
 
 # --------------------------------------------------------------
@@ -217,28 +252,9 @@ if __name__ == '__main__':
     args = parse_options()
     (MEDIA_PATH, CONN_STR) = read_config(args.config)
     mr = MediaRepository(MEDIA_PATH, CONN_STR)
+
     # Sanity checks
     mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
-    # Preps
-    if args.local:
-        # populate the cache of current avt img. so we don't delete them
-        mr.get_avatar_images()
-    # ------real main part------------
-    cleantime = datetime.today() - timedelta(days=args.days)
-    logging.info("Deleting remote media older than %s", cleantime)
-    num_deleted = 0
-    files = mr.get_media(args.local)
-    for file in [f for f in files if f.media_id not in mr._avatar_media_ids]:
-        if file.create_date < cleantime:
-            num_deleted += 1
-            if args.dryrun:  # the great pretender
-                logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
-                if not file.exists():
-                    logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
-            else:
-                file.delete()
-    if args.dryrun:
-        logging.info("%d files would have been deleted during the run.",
-                     num_deleted)
-    else:
-        logging.info("Deleted %d files during the run.", num_deleted)
+
+    # Clean out of files
+    mr.clean_media_files(args.days, args.local, args.dryrun)
