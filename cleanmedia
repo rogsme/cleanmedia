@@ -269,9 +269,10 @@ if __name__ == '__main__':
     if args.mxid:
         # Just clean a single media
         file = mr.get_single_media(args.mxid)
-        logging.info("Found media with id '%s'", args.mxid)
-        if file and not args.dryrun:
-            file.delete()
+        if file:
+            logging.info("Found media with id '%s'", args.mxid)
+            if not args.dryrun:
+                file.delete()
     else:          # main clean out...
         # Sanity checks
         mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
