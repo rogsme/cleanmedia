@@ -123,6 +123,23 @@ class MediaRepository:
             # creation_ts is ms since the epoch, so convert to seconds
             return File(self, row[0], row[1] // 1000, row[2])
 
+    def get_local_user_media(self, user_id: str) -> List[File]:
+        """Return all media created by a local user
+
+           :params:
+              :user_id: (`str`) of form "@user:servername.com"
+           :returns: `List[File]`
+          """
+        with self.conn.cursor() as cur:
+            sql_str = "SELECT media_id, creation_ts, base64hash from mediaapi_media_repository WHERE user_id = %s;"
+            cur.execute(sql_str, (user_id,))
+            files = []
+            for row in cur.fetchall():
+                # creation_ts is ms since the epoch, so convert to seconds
+                f = File(self, row[0], row[1] // 1000, row[2])
+                files.append(f)
+        return files
+
     def get_all_media(self, local: bool = False) -> List[File]:
         """Return List[File] of remote media or ALL media if local==True"""
         with self.conn.cursor() as cur:
@@ -241,11 +258,13 @@ def parse_options() -> argparse.Namespace:
     parser.add_argument('-c', '--config', default="config.yaml", help="location of the dendrite.yaml config file.")
     parser.add_argument('-m', '--mxid', dest="mxid",
                         help="Just delete media <MXID>. (no cleanup otherwise)")
+    parser.add_argument('-u', '--userid', dest="userid",
+                        help="Delete all media by local user '\\@user:domain.com'. (ie, a user on hour homeserver. no cleanup otherwise)")
     parser.add_argument('-t', '--days', dest="days",
                         default="30", type=int,
                         help="Keep remote media for <DAYS> days.")
     parser.add_argument('-l', '--local', action='store_true',
-                        help="Also include local (ie, from *our* users) media files when purging.")
+                        help="Also purge local (ie, from *our* users) media.")
     parser.add_argument('-n', '--dryrun', action='store_true',
                         help="Dry run (don't actually modify any files).")
     parser.add_argument('-q', '--quiet', action='store_true', help="Reduce output verbosity.")
@@ -266,11 +285,27 @@ if __name__ == '__main__':
 
     if args.mxid:
         # Just clean a single media
+        logging.info("Attempting to delete media '%s'", args.mxid)
         file = mr.get_single_media(args.mxid)
         if file:
             logging.info("Found media with id '%s'", args.mxid)
             if not args.dryrun:
                 file.delete()
+    elif args.userid:
+        logging.info("Attempting to delete media by user '%s'", args.userid)
+        files = mr.get_local_user_media(args.userid)
+        num_deleted = 0
+        for file in files:
+            num_deleted += 1
+            if args.dryrun:  # the great pretender
+                logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
+            else:
+                file.delete()
+        info_str = "Deleted %d files during the run."
+        if args.dryrun:
+            info_str = "%d files would have been deleted during the run."
+        logging.info(info_str, num_deleted)
+
     else:          # main clean out...
         # Sanity checks
         mr.sanity_check_thumbnails()  # warn in case of superfluous thumbnails
