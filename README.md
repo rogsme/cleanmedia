@@ -1,3 +1,5 @@
+# NOTE: I broke down and switched over to using Synapse, so while the tool works great, don't expect any further efforts from my side. If you want to take over maintainership, let me know (@spaetz:sspaeth.de).
+
 # Cleanmedia
 
 A poor man's data retention policy for dendrite servers.
