@@ -177,7 +177,7 @@ class MediaRepository:
     def sanity_check_thumbnails(self) -> None:
         """Warn if we have thumbnails in the db that do not refer to existing media"""
         with self.conn.cursor() as cur:
-            cur.execute("SELECT COUNT(media_id) from mediaapi_thumbnail WHERE media_id NOT IN (SELECT media_id FROM mediaapi_media_repository);")
+            cur.execute("SELECT COUNT(media_id) from mediaapi_thumbnail WHERE NOT EXISTS (SELECT media_id FROM mediaapi_media_repository);")
             row = cur.fetchone()
             if row is not None and row[0]:
                 logging.error("You have {} thumbnails in your db that do not refer to media. This needs fixing (we don't do that)!".format(row[0]))
