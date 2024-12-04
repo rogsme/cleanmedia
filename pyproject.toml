@@ -21,6 +21,8 @@ mypy = "^1.13.0"
 pylsp-mypy = "^0.6.9"
 types-pyyaml = "^6.0.12.20240917"
 types-psycopg2 = "^2.9.21.20241019"
+pytest = "^8.3.4"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,6 +37,12 @@ exclude = ["migrations"]
 enabled = true
 live_mode = true
 report_progress = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
 
 [tool.ruff]
 exclude = [
@@ -80,9 +88,3 @@ max-args = 6
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
-
-[tool.pytest.ini_options]
-pythonpath = [
-    "."
-]
- 
