@@ -1,6 +1,10 @@
 # Cleanmedia
 [![codecov](https://codecov.io/gl/rogs/cleanmedia/graph/badge.svg?token=CXOM5OQ76L)](https://codecov.io/gl/rogs/cleanmedia)
 
+<p align="center">
+  <img src="https://gitlab.com/uploads/-/system/project/avatar/64971838/logo.png" alt="cleanmedia"/>
+</p>
+
 A data retention policy tool for Dendrite servers.
 
 ## Special thanks
