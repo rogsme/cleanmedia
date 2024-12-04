@@ -27,14 +27,13 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 try:
-    import psycopg2  # noqa: E401
+    import psycopg2
     import psycopg2.extensions
     import yaml
 except ImportError as err:
     raise Exception("Please install psycopg2 and pyyaml") from err
 
 
-# ------------------------------------------------------------------------
 class File:
     """Represent a file in our db together with physical file and thumbnails."""
 
@@ -67,7 +66,6 @@ class File:
             res = False
         else:
             for file in self.fullpath.glob("*"):
-                # note: this does not handle directories in fullpath
                 file.unlink()
             self.fullpath.rmdir()
             logging.debug(f"Deleted directory {self.fullpath}")
@@ -128,7 +126,6 @@ class MediaRepository:
             row = cur.fetchone()
             if row is None:
                 return None
-            # creation_ts is ms since the epoch, so convert to seconds
             return File(self, row[0], row[1] // 1000, row[2])
 
     def get_local_user_media(self, user_id: str) -> List[File]:
@@ -143,7 +140,6 @@ class MediaRepository:
             cur.execute(sql_str, (user_id,))
             files = []
             for row in cur.fetchall():
-                # creation_ts is ms since the epoch, so convert to seconds
                 f = File(self, row[0], row[1] // 1000, row[2])
                 files.append(f)
         return files
@@ -171,7 +167,7 @@ class MediaRepository:
         with self.conn.cursor() as cur:
             cur.execute("SELECT avatar_url FROM userapi_profiles WHERE avatar_url > '';")
             for row in cur.fetchall():
-                url = row[0]  # mxc://matrix.org/6e627f4c538563
+                url = row[0]
                 try:
                     media_id.append(url[url.rindex("/") + 1 :])
                 except ValueError:
@@ -203,7 +199,6 @@ class MediaRepository:
         :returns: (int) The number of files that were/would be deleted
         """
         if local:
-            # populate the cache of current avt img. so we don't delete them
             self.get_avatar_images()
 
         cleantime = datetime.today() - timedelta(days=days)
@@ -213,7 +208,7 @@ class MediaRepository:
         for file in [f for f in files if f.media_id not in self._avatar_media_ids]:
             if file.create_date < cleantime:
                 num_deleted += 1
-                if dryrun:  # the great pretender
+                if dryrun:
                     logging.info(f"Pretending to delete file id {file.media_id} on path {file.fullpath}.")
                     if not file.exists():
                         logging.info(f"File id {file.media_id} does not physically exist (path {file.fullpath}).")
@@ -227,7 +222,6 @@ class MediaRepository:
         return num_deleted
 
 
-# --------------------------------------------------------------
 def read_config(conf_file: Union[str, Path]) -> Tuple[Path, str]:
     """Return db credentials and media path from dendrite config file."""
     try:
