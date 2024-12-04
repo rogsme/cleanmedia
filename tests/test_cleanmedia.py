@@ -66,6 +66,34 @@ def test_file_fullpath(media_repo: MediaRepository) -> None:
     assert file.fullpath == expected_path
 
 
+def test_file_exists_no_path(media_repo: MediaRepository) -> None:
+    """Test File.exists returns False when fullpath is None."""
+    file = File(media_repo, "mxid123", 1600000000, "")  # Empty hash ensures fullpath is None
+    assert file.exists() is False
+
+
+def test_file_delete_no_path(media_repo: MediaRepository) -> None:
+    """Test File._delete_files when file path is None."""
+    file = File(media_repo, "mxid123", 1600000000, "")
+    assert file._delete_files() is False
+
+
+def test_file_delete_oserror(media_repo: MediaRepository, mocker: MockerFixture, caplog: Any) -> None:
+    """Test File._delete_files when OSError occurs."""
+    file = File(media_repo, "mxid123", 1600000000, "abc123")
+
+    # Create directory structure
+    file_path = media_repo.media_path / "a" / "b" / "c123"
+    file_path.mkdir(parents=True)
+    (file_path / "file").touch()
+
+    # Mock Path.glob to raise OSError
+    mocker.patch.object(Path, "glob", side_effect=OSError("Permission denied"))
+
+    assert file._delete_files() is False
+    assert "Failed to delete files for mxid123: Permission denied" in caplog.text
+
+
 def test_file_fullpath_none_if_no_hash(media_repo: MediaRepository) -> None:
     """Test File.fullpath returns None when hash is empty."""
     file = File(media_repo, "mxid123", 1600000000, "")
@@ -162,6 +190,15 @@ def test_clean_media_files_dryrun(media_repo: MediaRepository, mock_db_conn: Tup
     assert num_deleted == 1
 
 
+def test_clean_media_files_local(media_repo: MediaRepository, mocker: MockerFixture) -> None:
+    """Test clean_media_files fetches avatar images when local=True."""
+    mock_get_avatars = mocker.patch.object(media_repo, "get_avatar_images")
+    media_repo.get_all_media = mocker.Mock(return_value=[])  # type: ignore
+
+    media_repo.clean_media_files(30, local=True)
+    mock_get_avatars.assert_called_once()
+
+
 def test_sanity_check_thumbnails(media_repo: MediaRepository, mock_db_conn: Tuple[Any, Any], caplog: Any) -> None:
     """Test MediaRepository.sanity_check_thumbnails logs correct message."""
     _, cursor_mock = mock_db_conn
@@ -183,6 +220,16 @@ def test_get_avatar_images(media_repo: MediaRepository, mock_db_conn: Tuple[Any,
     assert avatar_ids == ["abc123", "def456"]
 
 
+def test_get_avatar_images_invalid_url(media_repo: MediaRepository, mock_db_conn: Tuple[Any, Any], caplog: Any) -> None:
+    """Test get_avatar_images with invalid URL."""
+    _, cursor_mock = mock_db_conn
+    cursor_mock.fetchall.return_value = [("invalid_url",)]
+
+    avatar_ids = media_repo.get_avatar_images()
+    assert avatar_ids == []
+    assert "Invalid avatar URL: invalid_url" in caplog.text
+
+
 def test_validate_media_path_absolute(tmp_path: Path) -> None:
     """Test _validate_media_path with absolute path."""
     MediaRepository._validate_media_path(tmp_path)
@@ -193,6 +240,21 @@ def test_validate_media_path_not_exists(tmp_path: Path) -> None:
     invalid_path = tmp_path / "nonexistent"
     with pytest.raises(ValueError, match="Media directory not found"):
         MediaRepository._validate_media_path(invalid_path)
+
+
+def test_validate_media_path_relative(caplog: Any) -> None:
+    """Test _validate_media_path with relative path."""
+    relative_path = Path(".")
+    MediaRepository._validate_media_path(relative_path)
+    assert "Media path is relative" in caplog.text
+
+
+def test_connect_db_success(mocker: MockerFixture) -> None:
+    """Test successful database connection."""
+    mock_connect = mocker.patch("psycopg2.connect")
+    repo = MediaRepository(Path("/tmp"), "postgresql://fake")
+    repo.connect_db()
+    mock_connect.assert_called_with("postgresql://fake")
 
 
 def test_connect_db_invalid_string(tmp_path: Path) -> None:
@@ -282,6 +344,47 @@ media_api:
     assert conn_string == "postgresql://user:pass@localhost/db"
 
 
+def test_read_config_global_database(tmp_path: Path) -> None:
+    """Test read_config gets connection string from global database section."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+media_api:
+    base_path: /media/path
+global:
+    database:
+        connection_string: postgresql://global/db
+""")
+
+    path, conn_string = read_config(config_file)
+    assert conn_string == "postgresql://global/db"
+
+
+def test_read_config_missing_conn_string(tmp_path: Path) -> None:
+    """Test read_config exits when connection string is missing."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+media_api:
+    base_path: /media/path
+    database: {}
+""")
+
+    with pytest.raises(SystemExit):
+        read_config(config_file)
+
+
+def test_read_config_missing_base_path(tmp_path: Path) -> None:
+    """Test read_config exits when base_path is missing."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+media_api:
+    database:
+        connection_string: postgresql://fake/db
+""")
+
+    with pytest.raises(SystemExit):
+        read_config(config_file)
+
+
 def test_parse_options_defaults(mocker: MockerFixture) -> None:
     """Test parse_options default values."""
     mocker.patch("sys.argv", ["cleanmedia"])
@@ -291,3 +394,25 @@ def test_parse_options_defaults(mocker: MockerFixture) -> None:
     assert args.days == 30  # noqa PLR2004
     assert not args.local
     assert not args.dryrun
+
+
+def test_file_has_thumbnails(media_repo: MediaRepository, mock_db_conn: Tuple[Any, Any]) -> None:
+    """Test File.has_thumbnail returns correct count."""
+    _, cursor_mock = mock_db_conn
+    cursor_mock.fetchone.return_value = (3,)
+
+    file = File(media_repo, "mxid123", 1600000000, "abc123")
+    assert file.has_thumbnail() == 3  # noqa PLR2004
+    cursor_mock.execute.assert_called_with(
+        "SELECT COUNT(media_id) FROM mediaapi_thumbnail WHERE media_id = %s;",
+        ("mxid123",),
+    )
+
+
+def test_file_has_no_thumbnails(media_repo: MediaRepository, mock_db_conn: Tuple[Any, Any]) -> None:
+    """Test File.has_thumbnail returns 0 when no thumbnails exist."""
+    _, cursor_mock = mock_db_conn
+    cursor_mock.fetchone.return_value = None
+
+    file = File(media_repo, "mxid123", 1600000000, "abc123")
+    assert file.has_thumbnail() == 0
