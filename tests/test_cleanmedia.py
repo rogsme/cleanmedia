@@ -1,12 +1,14 @@
 """Tests for cleanmedia module."""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Tuple
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from cleanmedia import File, MediaRepository
+from cleanmedia import File, MediaRepository, parse_options, process_single_media, process_user_media, read_config
 
 
 @pytest.fixture
@@ -179,3 +181,113 @@ def test_get_avatar_images(media_repo: MediaRepository, mock_db_conn: Tuple[Any,
 
     avatar_ids = media_repo.get_avatar_images()
     assert avatar_ids == ["abc123", "def456"]
+
+
+def test_validate_media_path_absolute(tmp_path: Path) -> None:
+    """Test _validate_media_path with absolute path."""
+    MediaRepository._validate_media_path(tmp_path)
+
+
+def test_validate_media_path_not_exists(tmp_path: Path) -> None:
+    """Test _validate_media_path with non-existent directory."""
+    invalid_path = tmp_path / "nonexistent"
+    with pytest.raises(ValueError, match="Media directory not found"):
+        MediaRepository._validate_media_path(invalid_path)
+
+
+def test_connect_db_invalid_string(tmp_path: Path) -> None:
+    """Test connect_db with invalid connection string."""
+    with pytest.raises(ValueError, match="Invalid PostgreSQL connection string"):
+        repo = MediaRepository(tmp_path, "invalid")
+        repo.connect_db()
+
+
+def test_get_local_user_media(media_repo: MediaRepository, mock_db_conn: Tuple[Any, Any]) -> None:
+    """Test get_local_user_media returns correct files."""
+    _, cursor_mock = mock_db_conn
+    cursor_mock.fetchall.return_value = [
+        ("media1", 1600000000000, "hash1"),
+        ("media2", 1600000000000, "hash2"),
+    ]
+
+    files = media_repo.get_local_user_media("@user:domain.com")
+    assert len(files) == 2  # noqa PLR2004
+    assert files[0].media_id == "media1"
+    assert files[1].media_id == "media2"
+
+    cursor_mock.execute.assert_called_with(
+        "SELECT media_id, creation_ts, base64hash FROM mediaapi_media_repository WHERE user_id = %s;",
+        ("@user:domain.com",),
+    )
+
+
+def test_process_single_media(media_repo: MediaRepository) -> None:
+    """Test process_single_media deletes file."""
+    args = MagicMock()
+    args.mxid = "test_media"
+    args.dryrun = False
+
+    file_mock = MagicMock()
+    media_repo.get_single_media = MagicMock(return_value=file_mock)  # type: ignore
+
+    process_single_media(media_repo, args)
+
+    media_repo.get_single_media.assert_called_once_with("test_media")
+    file_mock.delete.assert_called_once()
+
+
+def test_process_user_media(media_repo: MediaRepository) -> None:
+    """Test process_user_media deletes all user files."""
+    args = MagicMock()
+    args.userid = "@test:domain.com"
+    args.dryrun = False
+
+    file1, file2 = MagicMock(), MagicMock()
+    media_repo.get_local_user_media = MagicMock(return_value=[file1, file2])  # type: ignore
+
+    process_user_media(media_repo, args)
+
+    media_repo.get_local_user_media.assert_called_once_with("@test:domain.com")
+    file1.delete.assert_called_once()
+    file2.delete.assert_called_once()
+
+
+def test_read_config_missing_file() -> None:
+    """Test read_config with missing config file."""
+    with pytest.raises(SystemExit):
+        read_config("nonexistent.yaml")
+
+
+def test_read_config_invalid_content(tmp_path: Path) -> None:
+    """Test read_config with invalid config content."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("invalid: true")
+
+    with pytest.raises(SystemExit):
+        read_config(config_file)
+
+
+def test_read_config_valid(tmp_path: Path) -> None:
+    """Test read_config with valid config."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+media_api:
+    base_path: /media/path
+    database:
+        connection_string: postgresql://user:pass@localhost/db
+""")
+
+    path, conn_string = read_config(config_file)
+    assert path == Path("/media/path")
+    assert conn_string == "postgresql://user:pass@localhost/db"
+
+
+def test_parse_options_defaults(mocker: MockerFixture) -> None:
+    """Test parse_options default values."""
+    mocker.patch("sys.argv", ["cleanmedia"])
+    args = parse_options()
+
+    assert args.config == "config.yaml"
+    assert args.days == 30  # noqa PLR2004
+    assert not args.local
+    assert not args.dryrun

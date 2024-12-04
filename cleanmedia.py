@@ -200,12 +200,10 @@ class MediaRepository:
         """
         with self.conn.cursor() as cur:
             cur.execute(
-                """SELECT media_id, creation_ts, base64hash
-                   FROM mediaapi_media_repository
-                   WHERE user_id = %s;""",
+                "SELECT media_id, creation_ts, base64hash FROM mediaapi_media_repository WHERE user_id = %s;",
                 (user_id,),
             )
-            return [File(self, row[0], row[1], row[2]) for row in cur.fetchall()]
+            return [File(self, row[0], row[1] // 1000, row[2]) for row in cur.fetchall()]
 
     def get_all_media(self, local: bool = False) -> List[File]:
         """Get all media files or only remote ones.
