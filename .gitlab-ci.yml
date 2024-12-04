@@ -62,4 +62,4 @@ deploy_to_gitlab:
     - docker login registry.gitlab.com -u $GITLAB_USERNAME -p $GITLAB_PASSWORD
     - docker buildx create --use
   script:
-    - docker buildx build --push --tag registry.gitlab.com/rogs/cleanmedia .
+    - docker buildx build --push --tag registry.gitlab.com/rogs/cleanmedia:latest .
