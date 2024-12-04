@@ -204,13 +204,13 @@ class MediaRepository:
         """
         if local:
             # populate the cache of current avt img. so we don't delete them
-            mr.get_avatar_images()
+            self.get_avatar_images()
 
         cleantime = datetime.today() - timedelta(days=days)
         logging.info("Deleting remote media older than %s", cleantime)
         num_deleted = 0
-        files = mr.get_all_media(local)
-        for file in [f for f in files if f.media_id not in mr._avatar_media_ids]:
+        files = self.get_all_media(local)
+        for file in [f for f in files if f.media_id not in self._avatar_media_ids]:
             if file.create_date < cleantime:
                 num_deleted += 1
                 if dryrun:  # the great pretender
