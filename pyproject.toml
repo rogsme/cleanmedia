@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "cleanmedia"
+version = "0.1.0"
+description = ""
+authors = ["Roger Gonzalez <roger@rogs.me>"]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+psycopg2 = "^2.9.10"
+
+
+[tool.poetry.group.dev.dependencies]
+python-lsp-ruff = "^2.2.2"
+pre-commit = "^4.0.1"
+python-lsp-server = "^1.12.0"
+ruff = "^0.8.1"
+mypy = "^1.13.0"
+pylsp-mypy = "^0.6.9"
+types-pyyaml = "^6.0.12.20240917"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+ignore_missing_imports = true
+strict = true
+exclude = ["migrations"]
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
+report_progress = true
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "__init__.py"
+]
+
+line-length = 121
+indent-width = 4
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "PL", "B", "A", "C4", "TID", "ERA", "RET", "W", "C90", "ARG", "Q", "FLY", "SIM", "COM", "D"]
+ignore = ["E402", "PLW2901"]
+
+[tool.ruff.lint.pylint]
+max-args = 6
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+ 
