@@ -9,6 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 psycopg2 = "^2.9.10"
+pyyaml = "^6.0.2"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -19,6 +20,7 @@ ruff = "^0.8.1"
 mypy = "^1.13.0"
 pylsp-mypy = "^0.6.9"
 types-pyyaml = "^6.0.12.20240917"
+types-psycopg2 = "^2.9.21.20241019"
 
 [build-system]
 requires = ["poetry-core"]
