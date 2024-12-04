@@ -45,3 +45,21 @@ deploy_to_dockerhub:
     - docker buildx create --use
   script:
     - docker buildx build --push --tag rogsme/cleanmedia:latest .
+
+deploy_to_gitlab:
+  stage: deploy
+  needs:
+    - test
+  only:
+    refs:
+      - master
+  except:
+    - tags
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login registry.gitlab.com -u $GITLAB_USERNAME -p $GITLAB_PASSWORD
+    - docker buildx create --use
+  script:
+    - docker buildx build --push --tag registry.gitlab.com/rogs/cleanmedia .
