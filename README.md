@@ -1,81 +1,127 @@
-# NOTE: I broke down and switched over to using Synapse, so while the tool works great, don't expect any further efforts from my side. If you want to take over maintainership, let me know (@spaetz:sspaeth.de).
-
 # Cleanmedia
 
-A poor man's data retention policy for dendrite servers.
+A data retention policy tool for Dendrite servers.
 
-## USAGE
+## Special thanks
 
-Check the command line options with --help. You mainly pass it the dendrite
-configuration file as a means to find a) the media directory and b) the postgres
-credentials for the dendrite data base.
+The original author of this script is Sebastian Spaeth ([sspaeth](https://gitlab.com/sspaeth)). All props to him!
 
-You can also pass in the number of days you want to keep remote
-media. Optionally, you may also purge media from local users on the
-homeserver.
+## Overview
 
-### How it works
+Cleanmedia helps manage media storage on Dendrite servers by implementing configurable retention policies for both remote and local media files. It can remove old media files based on age while preserving essential content like user avatars.
 
-#### Purge remote media (default)
+## Installation
 
-cleanmedia scours the database for all entries in the media repository
-where user_id is an empty string (that is, the media was not uploaded
-by a local user). It then deletes all entries, thumbnails and media
-files that have been created `DAYS` time ago. (with DAYS being
-configurable via command line and a default of 30 days)
+Cleanmedia uses Poetry for dependency management. To install:
 
-This includes a number of remote media that we might want to keep
-(e.g. avatar images of users on remote home servers).
+```bash
+# Install Poetry if you haven't already
+pip install poetry
 
-The main idea behind focusing on remote media is that a server
-should be able to refetch remote media in case it is needed.
+# Install dependencies
+poetry install
+```
 
-#### Purging "local" media (optional)
+### Requirements
 
-It also makes sense to delete local media, and it is possible using the
-option -l, but that is more complicated. (Local means, originating by
-users on our homeserver.)
+- Python >= 3.9
+- Poetry for dependency management
+- Required packages (automatically installed by Poetry):
+  - psycopg2
+  - pyyaml
+  - Development dependencies for testing and linting
 
-a) we might be the only source of our user's media, so any local media
-that we purge might not be retrievable by anyone anymore - ever.
+## Usage
 
-b) it is not easy to decide which local media are safe to purge.
+Check the command line options with `--help`. The main functionality requires:
+1. A Dendrite configuration file (to locate the media directory and PostgreSQL credentials)
+2. Optionally, the number of days to retain remote media
+3. Additional flags to control behavior
 
-Possible scenarios: local media older than Y days, rooms that have been
-left by all users and are thus "unreachable", rooms that have been
-upgraded but have users left in it, media that has not been "accessed"
-the last Y days, ....
+```bash
+poetry run python cleanmedia.py --help
+```
 
-Finding out these things and setting all these policies is way more
-difficult and in some cases we do not have the information we'd need
-(e.g. when media has been accessed the last time).
+### Command Line Options
 
-Right now, we purge all older local media, except for user avatar
-images.
+- `-c`, `--config`: Path to dendrite.yaml config file (default: config.yaml)
+- `-m`, `--mxid`: Delete a specific media ID
+- `-u`, `--userid`: Delete all media from a local user ('@user:domain.com')
+- `-t`, `--days`: Keep remote media for specified number of days (default: 30)
+- `-l`, `--local`: Include local user media in cleanup
+- `-n`, `--dryrun`: Simulate cleanup without modifying files
+- `-q`, `--quiet`: Reduce output verbosity
+- `-d`, `--debug`: Increase output verbosity
 
-#### Sanity checks
+### How it Works
 
-In addition, we perform some sanity checks and warns if inconsistencies
-occur:
+#### Remote Media Purge (Default)
+- Scans database for media entries where user_id is empty (remote media)
+- Deletes entries and files older than the specified retention period
+- Includes cleanup of associated thumbnails
+- Preserves remote avatar images of users
 
-1) Are there thumbnails in the db that do not have corresponding media
-    file entries (in the db)?
+#### Local Media Purge (Optional)
+- Activated with the `-l` flag
+- Removes media uploaded by local server users
+- Preserves user avatar images
+- Use with caution as local media might not be retrievable after deletion
 
-## Requirements
+### Sanity Checks
 
- - Python >= 3.8
- - psycopg2
- - yaml
+The tool performs consistency checks and warns about:
+- Thumbnails in the database without corresponding media entries
+- Missing files that should exist according to the database
+- Invalid file paths or permissions issues
 
+## Development
 
-## Todo
+### Testing
 
-- Sanity checks: Are files on the file system that the db does not
-  know about?
+The project includes a comprehensive test suite using pytest:
 
-## LICENSE
+```bash
+# Run tests
+poetry run pytest
+
+# Run tests with coverage report
+poetry run pytest --cov=. --cov-report=xml
+
+# Run specific test file
+poetry run pytest tests/test_cleanmedia.py
+```
+
+### Code Quality
+
+Multiple tools ensure code quality:
+
+```bash
+# Run linting
+poetry run ruff check
+
+# Run formatting check
+poetry run ruff format --check
+
+# Run type checking
+poetry run mypy .
+```
+
+The project uses pre-commit hooks for consistent code quality. Install them with:
+
+```bash
+poetry run pre-commit install
+```
+
+## License
 
 This code is released under the GNU GPL v3 or any later version.
 
-**There is no warranty for correctness or data that might be
-accidentally deleted. Assume the worst and hope for the best!**
+**Warning**: There is no warranty for correctness or data that might be accidentally deleted. Use with caution and always test with `--dryrun` first!
+
+## Contributing
+
+Contributions are welcome! Please ensure you:
+1. Add tests for new functionality
+2. Follow the existing code style (enforced by ruff)
+3. Update documentation as needed
+4. Run the test suite and linting before submitting PRs
