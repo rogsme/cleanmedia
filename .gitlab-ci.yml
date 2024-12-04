@@ -1,20 +1,15 @@
-image: python:3-alpine
+image: python:latest
 
-# Also run CI for Merge requests
-workflow:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+stages:
+  - lint
 
 before_script:
-  #  - python --version ; pip --version  # For debugging
-  - pip install flake8 -qq
-  - pip install mypy -qq
-  - pip install types-PyYAML types-psycopg2 -qq
+  - pip install poetry
+  - poetry install --no-root
 
-test:
+lint:
+  stage: lint
   script:
-    # ignore long lines
-    - flake8 --ignore=E501 cleanmedia
-    - mypy cleanmedia
+    - poetry run ruff check
+    - poetry run ruff format --check
+    - poetry run mypy .
