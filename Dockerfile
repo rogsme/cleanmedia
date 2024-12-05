@@ -30,7 +30,8 @@ RUN apk add --no-cache \
     libffi \
     libxml2 \
     libxslt \
-    tzdata
+    tzdata \
+    dcron
 
 COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 COPY --from=builder /app /app
@@ -38,3 +39,7 @@ COPY --from=builder /app /app
 ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages
 
 COPY . .
+
+RUN echo -e "SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n" > /etc/crontabs/root
+
+CMD echo "${CRON:-0 0 * * *} python /app/cleanmedia.py ${CLEANMEDIA_OPTS:--t 30}" >> /etc/crontabs/root && crond -f -l 2
