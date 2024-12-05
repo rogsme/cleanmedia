@@ -17,6 +17,38 @@ Cleanmedia helps manage media storage on Dendrite servers by implementing config
 
 ## Installation
 
+### Using Docker (Recommended)
+
+The easiest way to run Cleanmedia is using Docker. You can either use it as a standalone container or integrate it with your docker-compose.yml:
+
+```yaml
+services:
+  cleanmedia:
+    hostname: cleanmedia
+    image: rogsme/cleanmedia
+    volumes:
+      - /your/dendrite/config/location:/etc/dendrite
+      - /your/dendrite/media/location:/var/dendrite/media
+    environment:
+      - CRON=0 0 * * *  # Run daily at midnight
+      - CLEANMEDIA_OPTS=-c /etc/dendrite/dendrite.yaml -t 30 -l  # 30 day retention, include local files
+    depends_on:
+      - monolith
+```
+⚠ **MAKE SURE YOUR MOUNTPOINTS CORRESPOND TO THE MOUNTPOINTS OF YOUR DENDRITE DOCKER INSTALLATION!**
+
+#### Environment Variables
+
+- `CRON`: Cron schedule expression (default: `0 0 * * *` - daily at midnight)
+- `CLEANMEDIA_OPTS`: Command line options for cleanmedia (default: `-c /etc/dendrite/dendrite.yaml -t 30 -n -l`)
+
+#### Docker Volume Mounts
+
+- `/etc/dendrite`: Dendrite configuration directory
+- `/var/dendrite/media`: Dendrite media storage directory
+
+### Manual Installation
+
 Cleanmedia uses Poetry for dependency management. To install:
 
 ```bash
@@ -27,7 +59,7 @@ pip install poetry
 poetry install
 ```
 
-### Requirements
+#### Requirements
 
 - Python >= 3.9
 - Poetry for dependency management
@@ -37,15 +69,6 @@ poetry install
   - Development dependencies for testing and linting
 
 ## Usage
-
-Check the command line options with `--help`. The main functionality requires:
-1. A Dendrite configuration file (to locate the media directory and PostgreSQL credentials)
-2. Optionally, the number of days to retain remote media
-3. Additional flags to control behavior
-
-```bash
-poetry run python cleanmedia.py --help
-```
 
 ### Command Line Options
 
@@ -57,6 +80,31 @@ poetry run python cleanmedia.py --help
 - `-n`, `--dryrun`: Simulate cleanup without modifying files
 - `-q`, `--quiet`: Reduce output verbosity
 - `-d`, `--debug`: Increase output verbosity
+
+### Docker Usage Examples
+
+1. Run with default settings (daily cleanup, 30-day retention):
+```bash
+docker compose up -d cleanmedia
+```
+
+2. Run with custom schedule and options:
+```yaml
+environment:
+  - CRON=0 */6 * * *  # Run every 6 hours
+  - CLEANMEDIA_OPTS=-c /etc/dendrite/dendrite.yaml -t 14 -l -d  # 14 day retention with debug logging
+```
+
+3. Run a one-off cleanup:
+```bash
+docker compose run --rm cleanmedia python cleanmedia.py -c /etc/dendrite/dendrite.yaml -t 1 -l -d -n
+```
+
+### Manual Usage
+
+```bash
+poetry run python cleanmedia.py --help
+```
 
 ### How it Works
 
