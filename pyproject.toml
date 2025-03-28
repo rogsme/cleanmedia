@@ -1,33 +1,30 @@
-[tool.poetry]
+[project]
 name = "cleanmedia"
 version = "0.1.0"
 description = ""
-authors = ["Roger Gonzalez <roger@rogs.me>"]
-license = "GPL-3.0-or-later"
+authors = [{ name = "Roger Gonzalez", email = "roger@rogs.me" }]
+requires-python = "~=3.9"
 readme = "README.md"
+license = "GPL-3.0-or-later"
+dependencies = [
+    "psycopg2>=2.9.10,<3",
+    "pyyaml>=6.0.2,<7",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-psycopg2 = "^2.9.10"
-pyyaml = "^6.0.2"
-
-
-[tool.poetry.group.dev.dependencies]
-python-lsp-ruff = "^2.2.2"
-pre-commit = "^4.0.1"
-python-lsp-server = "^1.12.0"
-ruff = "^0.8.1"
-mypy = "^1.13.0"
-pylsp-mypy = "^0.6.9"
-types-pyyaml = "^6.0.12.20240917"
-types-psycopg2 = "^2.9.21.20241019"
-pytest = "^8.3.4"
-pytest-mock = "^3.14.0"
-pytest-coverage = "^0.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "python-lsp-ruff>=2.2.2,<3",
+    "pre-commit>=4.0.1,<5",
+    "python-lsp-server>=1.12.0,<2",
+    "ruff>=0.8.1,<0.9",
+    "mypy>=1.13.0,<2",
+    "pylsp-mypy>=0.6.9,<0.7",
+    "types-pyyaml>=6.0.12.20240917,<7",
+    "types-psycopg2>=2.9.21.20241019,<3",
+    "pytest>=8.3.4,<9",
+    "pytest-mock>=3.14.0,<4",
+    "pytest-coverage>=0.0,<0.1",
+]
 
 [tool.mypy]
 ignore_missing_imports = true
