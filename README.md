@@ -49,21 +49,21 @@ services:
 
 ### Manual Installation
 
-Cleanmedia uses Poetry for dependency management. To install:
+Cleanmedia uses uv for dependency management. To install:
 
 ```bash
-# Install Poetry if you haven't already
-pip install poetry
+# Install uv if you haven't already
+pip install uv
 
 # Install dependencies
-poetry install
+uv sync
 ```
 
 #### Requirements
 
 - Python >= 3.9
-- Poetry for dependency management
-- Required packages (automatically installed by Poetry):
+- uv for dependency management
+- Required packages (automatically installed by uv):
   - psycopg2
   - pyyaml
   - Development dependencies for testing and linting
@@ -103,7 +103,7 @@ docker compose run --rm cleanmedia python cleanmedia.py -c /etc/dendrite/dendrit
 ### Manual Usage
 
 ```bash
-poetry run python cleanmedia.py --help
+uv run cleanmedia.py --help
 ```
 
 ### How it Works
@@ -135,13 +135,13 @@ The project includes a comprehensive test suite using pytest:
 
 ```bash
 # Run tests
-poetry run pytest
+uv run pytest
 
 # Run tests with coverage report
-poetry run pytest --cov=. --cov-report=xml
+uv run pytest --cov=. --cov-report=xml
 
 # Run specific test file
-poetry run pytest tests/test_cleanmedia.py
+uv run pytest tests/test_cleanmedia.py
 ```
 
 ### Code Quality
@@ -150,19 +150,19 @@ Multiple tools ensure code quality:
 
 ```bash
 # Run linting
-poetry run ruff check
+uv run ruff check
 
 # Run formatting check
-poetry run ruff format --check
+uv run ruff format --check
 
 # Run type checking
-poetry run mypy .
+uv run mypy .
 ```
 
 The project uses pre-commit hooks for consistent code quality. Install them with:
 
 ```bash
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 ## License
