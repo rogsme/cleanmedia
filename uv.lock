@@ -37,7 +37,7 @@ wheels = [
 [[package]]
 name = "cleanmedia"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "psycopg2" },
     { name = "pyyaml" },

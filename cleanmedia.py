@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Media cleanup utility for Dendrite servers."""
 
 """

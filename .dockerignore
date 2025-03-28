@@ -6,6 +6,7 @@ __pycache__/
 # Ignore virtual environments
 venv/
 .env/
+.venv
 
 # Ignore test files and directories
 tests/
@@ -31,3 +32,6 @@ Dockerfile*
 
 # Images
 *.png
+
+# Ignore caches
+.*cache
