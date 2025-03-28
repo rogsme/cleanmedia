@@ -28,5 +28,5 @@ ENV PATH=/app/.venv/bin:$PATH
 
 COPY . .
 
-CMD echo "${CRON:-0 0 * * *} /app/cleanmedia.py ${CLEANMEDIA_OPTS:-c /etc/dendrite/dendrite.yaml -t 30 -n -l}" > /app/crontab && \
+CMD echo "${CRON:-0 0 * * *} python /app/cleanmedia.py ${CLEANMEDIA_OPTS:--c /etc/dendrite/dendrite.yaml -t 30 -n -l}" > /app/crontab && \
     /usr/local/bin/supercronic /app/crontab
