@@ -1,0 +1,31 @@
+name: Deploy to DockerHub & Gitea
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Log in to Gitea Registry
+        run: echo "${{ vars.REPOSITORY_TOKEN }}" | docker login git.rogs.me -u rogs --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push image
+        run: |
+          docker buildx build --push \
+            --tag rogsme/cleanmedia:latest \
+            --tag git.rogs.me/rogs/cleanmedia:latest \
+            .
