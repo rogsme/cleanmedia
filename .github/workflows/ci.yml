@@ -40,7 +40,7 @@ jobs:
         run: |
           uv venv .venv
           source .venv/bin/activate
-          uv run pytest -v --cov=. --cov-report=xml
+          uv run pytest
 
   deploy:
     runs-on: ubuntu-latest

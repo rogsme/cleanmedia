@@ -15,7 +15,7 @@ lint:
 test:
   stage: test
   script:
-    - uv run pytest -v --cov=. --cov-report=xml
+    - uv run pytest
 
 deploy_to_gitlab:
   stage: deploy
