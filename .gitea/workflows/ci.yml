@@ -17,14 +17,9 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Set up virtualenv
-        run: |
-          uv venv .venv
-          source .venv/bin/activate
-          uv pip install ruff mypy
-
       - name: Run Ruff & Mypy
         run: |
+          uv venv .venv
           source .venv/bin/activate
           uv run ruff check
           uv run ruff format --check
@@ -40,14 +35,9 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Set up virtualenv
-        run: |
-          uv venv .venv
-          source .venv/bin/activate
-          uv pip install pytest coverage
-
       - name: Run Tests
         run: |
+          uv venv .venv
           source .venv/bin/activate
           uv run pytest -v --cov=. --cov-report=xml
 
