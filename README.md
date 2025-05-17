@@ -1,5 +1,6 @@
 # Cleanmedia
 [![codecov](https://codecov.io/gl/rogs/cleanmedia/graph/badge.svg?token=CXOM5OQ76L)](https://codecov.io/gl/rogs/cleanmedia)
+[![CI](https://git.rogs.me/rogs/cleanmedia/actions/workflows/ci.yml/badge.svg)](https://git.rogs.me/rogs/cleanmedia/actions)
 
 <p align="center">
   <img src="https://gitlab.com/uploads/-/system/project/avatar/64971838/logo.png" alt="cleanmedia"/>
